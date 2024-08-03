@@ -16,9 +16,16 @@ def load_products():
 def save_products():
     st.session_state.products.to_csv(CSV_FILE, index=False)
 
+def remove_expired_products():
+    today = datetime.now().date()
+    st.session_state.products = st.session_state.products[pd.to_datetime(st.session_state.products['Date']).dt.date > today - timedelta(days=30)]
+    save_products()
+
 # Initialisation de la base de données (DataFrame)
 if 'products' not in st.session_state:
     st.session_state.products = load_products()
+
+remove_expired_products()
 
 # Initialisation des variables de session
 if 'nom' not in st.session_state:
