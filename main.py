@@ -94,10 +94,10 @@ def modify_product():
 def fill_form():
     index = st.session_state.selected_rows[st.session_state.current_index]
     st.session_state.nom = st.session_state.products.at[index, 'Nom']
-    st.session_state.reference = st.session_state.products.at(index, 'Référence')
-    st.session_state.fournisseur = st.session_state.products.at(index, 'Fournisseur')
-    st.session_state.date = pd.to_datetime(st.session_state.products.at(index, 'Date')).date()
-    st.session_state.quantite = st.session_state.products.at(index, 'Quantité')
+    st.session_state.reference = st.session_state.products.at[index, 'Référence']
+    st.session_state.fournisseur = st.session_state.products.at[index, 'Fournisseur']
+    st.session_state.date = pd.to_datetime(st.session_state.products.at[index, 'Date']).date()
+    st.session_state.quantite = st.session_state.products.at[index, 'Quantité']
     st.session_state.show_form = True
     st.session_state.edit_mode = True
 
