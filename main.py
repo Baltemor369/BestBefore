@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Nom du fichier CSV
 CSV_FILE = 'products.csv'
@@ -87,12 +87,23 @@ def modify_product():
 def fill_form():
     index = st.session_state.selected_rows[st.session_state.current_index]
     st.session_state.nom = st.session_state.products.at[index, 'Nom']
-    st.session_state.reference = st.session_state.products.at[index, 'Référence']
-    st.session_state.fournisseur = st.session_state.products.at[index, 'Fournisseur']
-    st.session_state.date = pd.to_datetime(st.session_state.products.at[index, 'Date']).date()
-    st.session_state.quantite = st.session_state.products.at[index, 'Quantité']
+    st.session_state.reference = st.session_state.products.at(index, 'Référence')
+    st.session_state.fournisseur = st.session_state.products.at(index, 'Fournisseur')
+    st.session_state.date = pd.to_datetime(st.session_state.products.at(index, 'Date')).date()
+    st.session_state.quantite = st.session_state.products.at(index, 'Quantité')
     st.session_state.show_form = True
     st.session_state.edit_mode = True
+
+# Fonction pour colorer les lignes en fonction de la date
+def color_rows(row):
+    today = datetime.now().date()
+    date = pd.to_datetime(row['Date']).date()
+    if date <= today + timedelta(days=30):
+        return ['background-color: red'] * len(row)
+    elif date <= today + timedelta(days=60):
+        return ['background-color: orange'] * len(row)
+    else:
+        return ['background-color: green'] * len(row)
 
 # Interface utilisateur
 st.title('Gestion des Périmés')
@@ -110,8 +121,8 @@ with col2:
     # Filtrage des produits en fonction de la recherche
     filtered_products = st.session_state.products[st.session_state.products[st.session_state.search_attribute].str.contains(st.session_state.search_query, case=False, na=False)]
     
-    # Affichage de la liste des produits filtrés
-    st.dataframe(filtered_products)
+    # Affichage de la liste des produits filtrés avec coloration
+    st.dataframe(filtered_products.style.apply(color_rows, axis=1))
 
 with col1:
 
