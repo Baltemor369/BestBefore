@@ -1,9 +1,40 @@
 import streamlit as st
 import pandas as pd
+import sqlite3
 from datetime import datetime, timedelta
 
 # Nom du fichier CSV
 CSV_FILE = 'products.csv'
+DB_NAME = 'fournisseurs.db'
+
+# Connection à la BDD
+conn = sqlite3.connect(DB_NAME)
+c = conn.cursor()
+# Create table fournisseurs
+c.execute('''
+    CREATE TABLE IF NOT EXISTS fournisseurs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nom TEXT NOT NULL
+    )
+''')
+conn.commit()
+
+# Fonction pour sauvegarder un fournisseur dans la base de données
+def sauvegarder_fournisseur(nom):
+    # Connection à la BDD
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute('INSERT INTO fournisseurs (nom) VALUES (?)', (nom,))
+    conn.commit()
+
+# Fonction pour charger la liste des fournisseurs depuis la base de données
+def charger_fournisseurs():
+    # Connection à la BDD
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute('SELECT nom FROM fournisseurs')
+    rows = c.fetchall()
+    return [row[0] for row in rows]
 
 # Fonction pour charger les produits depuis le fichier CSV
 def load_products():
@@ -20,6 +51,20 @@ def remove_expired_products():
     today = datetime.now().date()
     st.session_state.products = st.session_state.products[pd.to_datetime(st.session_state.products['Date']).dt.date > today - timedelta(days=30)]
     save_products()
+
+# Fonction de rappel pour ajouter un nouveau fournisseur à la liste
+def add_fournisseur():
+    new_fournisseur = st.session_state.new_fournisseur
+    if new_fournisseur :
+        if new_fournisseur not in st.session_state.fournisseur_list :
+            st.session_state.fournisseur_list.append(new_fournisseur)
+            sauvegarder_fournisseur(new_fournisseur)
+            st.success(f'Fournisseur "{new_fournisseur}" ajouté avec succès!')
+            st.session_state.new_fournisseur = ''
+        else :
+            st.warning(f'Le fournisseur "{new_fournisseur}" existe déjà.')
+    else:
+        st.error('Veuillez entrer un nom de fournisseur valide.')
 
 # Initialisation de la base de données (DataFrame)
 if 'products' not in st.session_state:
@@ -50,6 +95,21 @@ if 'search_query' not in st.session_state:
     st.session_state.search_query = ''
 if 'search_attribute' not in st.session_state:
     st.session_state.search_attribute = 'Nom'
+if 'temp_nom' not in st.session_state:
+    st.session_state.temp_nom = ''
+if 'temp_reference' not in st.session_state:
+    st.session_state.temp_reference = ''
+if 'temp_fournisseur' not in st.session_state:
+    st.session_state.temp_fournisseur = ''
+if 'temp_date' not in st.session_state:
+    st.session_state.temp_date = datetime.now().date()
+if 'temp_quantite' not in st.session_state:
+    st.session_state.temp_quantite = 0
+if 'fournisseur_list' not in st.session_state:
+    st.session_state.fournisseur_list = charger_fournisseurs()
+if 'new_fournisseur' not in st.session_state:
+    st.session_state.new_fournisseur = ''
+
 
 # Fonction pour ajouter un produit
 def add_product():
@@ -63,6 +123,12 @@ def add_product():
     st.session_state.products = pd.concat([st.session_state.products, new_product], ignore_index=True)
     save_products()
     st.session_state.show_form = False
+    # Sauvegarde temporaire des informations du produit
+    st.session_state.temp_nom = st.session_state.nom
+    st.session_state.temp_reference = st.session_state.reference
+    st.session_state.temp_fournisseur = st.session_state.fournisseur
+    st.session_state.temp_date = st.session_state.date
+    st.session_state.temp_quantite = st.session_state.quantite
 
 # Fonction pour supprimer des produits sélectionnés
 def delete_products():
@@ -116,7 +182,7 @@ def color_rows(row):
 st.title('Gestion des Périmés')
 
 # Disposition en colonnes
-col1, col2 = st.columns([2, 3])
+col1, col2 = st.columns([2, 4])
 
 with col2:
     # Liste déroulante pour sélectionner l'attribut de recherche
@@ -137,20 +203,27 @@ with col1:
     if st.button('Ajouter un produit'):
         st.session_state.show_form = not st.session_state.show_form
         st.session_state.edit_mode = False
+        # Remplir le formulaire avec les informations temporaires
+        st.session_state.nom = st.session_state.temp_nom
+        st.session_state.reference = st.session_state.temp_reference
+        st.session_state.fournisseur = st.session_state.temp_fournisseur
+        st.session_state.date = st.session_state.temp_date
+        st.session_state.quantite = st.session_state.temp_quantite
 
     # Formulaire pour ajouter ou modifier un produit
     if st.session_state.show_form:
         if st.session_state.edit_mode:
-            st.text_input('Nom', key='nom')
-            st.text_input('Référence', key='reference')
-            st.text_input('Fournisseur', key='fournisseur')
+            st.text_input('Nom', key='nom', on_change=lambda: st.session_state.update({'nom': st.session_state.nom.lower()}))
+            st.text_input('Référence', key='reference', on_change=lambda: st.session_state.update({'reference': st.session_state.reference.upper().replace(' ','')}))
+            st.session_state.fournisseur = st.selectbox('Fournisseur', st.session_state.fournisseur_list)
+            st.text_input('Fournisseur', key='fournisseur', on_change=lambda: st.session_state.update({'fournisseur': st.session_state.fournisseur.lower()}))
             st.date_input('Date', key='date')
             st.number_input('Quantité', min_value=0, key='quantite')
             st.button('Enregistrer', on_click=modify_product)
         else:
-            st.text_input('Nom', key='nom')
-            st.text_input('Référence', key='reference')
-            st.text_input('Fournisseur', key='fournisseur')
+            st.text_input('Nom', key='nom', on_change=lambda: st.session_state.update({'nom': st.session_state.nom.lower()}))
+            st.text_input('Référence', key='reference', on_change=lambda: st.session_state.update({'reference': st.session_state.reference.upper().replace(' ','')}))
+            st.session_state.fournisseur = st.selectbox('Fournisseur', st.session_state.fournisseur_list)
             st.date_input('Date', key='date')
             st.number_input('Quantité', min_value=0, key='quantite')
             st.button('Enregistrer', on_click=add_product)
@@ -166,3 +239,9 @@ with col1:
     # Modification d'un produit sélectionné
     if st.session_state.selected_rows:
         st.button('Modifier la sélection', on_click=fill_form)
+
+    # Input pour saisir un nouveau fournisseur
+    new_fournisseur = st.text_input('Nouveau Fournisseur', key='new_fournisseur')
+
+    # Bouton pour ajouter le nouveau fournisseur à la liste
+    st.button('Ajouter Fournisseur', on_click=add_fournisseur)
