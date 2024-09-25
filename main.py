@@ -20,15 +20,23 @@ c.execute('''
 conn.commit()
 
 # Fonction pour sauvegarder un fournisseur dans la base de données
-def sauvegarder_fournisseur(nom):
+def save_in_fournisseur(nom):
     # Connection à la BDD
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     c.execute('INSERT INTO fournisseurs (nom) VALUES (?)', (nom,))
     conn.commit()
 
+# Fonction pour sauvegarder un fournisseur dans la base de données
+def save_out_fournisseur(nom):
+    # Connection à la BDD
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute("DELETE FROM fournisseurs WHERE nom = ?", (new_fournisseur,))
+    conn.commit()
+
 # Fonction pour charger la liste des fournisseurs depuis la base de données
-def charger_fournisseurs():
+def load_fournisseur():
     # Connection à la BDD
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
@@ -47,18 +55,24 @@ def load_products():
 def save_products():
     st.session_state.products.to_csv(CSV_FILE, index=False)
 
+# Fonction pour supprimer les produits qui dépassé de 1 mois
 def remove_expired_products():
     today = datetime.now().date()
     st.session_state.products = st.session_state.products[pd.to_datetime(st.session_state.products['Date']).dt.date > today - timedelta(days=30)]
     save_products()
 
-# Fonction de rappel pour ajouter un nouveau fournisseur à la liste
+# Fonction pour mettre en maj tout les ref dans la BDD
+def capitalize_fournisseurs():
+    st.session_state.products['fournisseur'] = st.session_state.products['Fournisseur'].apply(lambda x: x.capitalize() if isinstance(x, str) else x)
+    save_products()
+
+# Fonction de rappel pour ajouter un nouveau fournisseur
 def add_fournisseur():
-    new_fournisseur = st.session_state.new_fournisseur
+    new_fournisseur = st.session_state.new_fournisseur.capitalize()
     if new_fournisseur :
         if new_fournisseur not in st.session_state.fournisseur_list :
             st.session_state.fournisseur_list.append(new_fournisseur)
-            sauvegarder_fournisseur(new_fournisseur)
+            save_in_fournisseur(new_fournisseur)
             st.success(f'Fournisseur "{new_fournisseur}" ajouté avec succès!')
             st.session_state.new_fournisseur = ''
         else :
@@ -66,11 +80,29 @@ def add_fournisseur():
     else:
         st.error('Veuillez entrer un nom de fournisseur valide.')
 
+# Fonction de suppression d'un fournisseur
+def del_fournisseur():
+    new_fournisseur = st.session_state.new_fournisseur.capitalize()
+    if new_fournisseur:
+        if new_fournisseur in st.session_state.fournisseur_list:
+            # Delete the fournisseur from the database
+            save_out_fournisseur(new_fournisseur)
+            
+            # Delete new_fournisseur from st.session_state.fournisseur_list
+            st.session_state.fournisseur_list.remove(new_fournisseur)
+            st.success(f'Fournisseur "{new_fournisseur}" supprimé avec succès!')
+            st.session_state.new_fournisseur = ''
+        else:
+            st.warning(f'Le fournisseur "{new_fournisseur}" n\'existe pas.')
+    else:
+        st.error('Veuillez entrer un nom de fournisseur valide.')
+        
 # Initialisation de la base de données (DataFrame)
 if 'products' not in st.session_state:
     st.session_state.products = load_products()
 
 remove_expired_products()
+capitalize_fournisseurs()
 
 # Initialisation des variables de session
 if 'nom' not in st.session_state:
@@ -106,7 +138,7 @@ if 'temp_date' not in st.session_state:
 if 'temp_quantite' not in st.session_state:
     st.session_state.temp_quantite = 0
 if 'fournisseur_list' not in st.session_state:
-    st.session_state.fournisseur_list = charger_fournisseurs()
+    st.session_state.fournisseur_list = load_fournisseur()
 if 'new_fournisseur' not in st.session_state:
     st.session_state.new_fournisseur = ''
 
@@ -245,3 +277,6 @@ with col1:
 
     # Bouton pour ajouter le nouveau fournisseur à la liste
     st.button('Ajouter Fournisseur', on_click=add_fournisseur)
+    
+    # Bouton pour ajouter le nouveau fournisseur à la liste
+    st.button('Supprimer Fournisseur', on_click=del_fournisseur)
