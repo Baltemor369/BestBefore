@@ -14,17 +14,18 @@ c = conn.cursor()
 c.execute('''
     CREATE TABLE IF NOT EXISTS fournisseurs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        nom TEXT NOT NULL
+        nom TEXT NOT NULL,
+        code TEXT NOT NULL
     )
 ''')
 conn.commit()
 
 # Fonction pour sauvegarder un fournisseur dans la base de données
-def save_in_fournisseur(nom):
+def save_in_fournisseur(nom,code):
     # Connection à la BDD
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    c.execute('INSERT INTO fournisseurs (nom) VALUES (?)', (nom,))
+    c.execute('INSERT INTO fournisseurs (nom,code) VALUES (?,?)', (nom,code))
     conn.commit()
 
 # Fonction pour sauvegarder un fournisseur dans la base de données
@@ -40,9 +41,17 @@ def load_fournisseur():
     # Connection à la BDD
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    c.execute('SELECT nom FROM fournisseurs')
+    c.execute('SELECT nom,code FROM fournisseurs')
     rows = c.fetchall()
     return [row[0] for row in rows]
+
+def get_code(name):
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    # get from the database the element where nom = name
+    c.execute('SELECT code FROM fournisseurs WHERE nom=?', (name,))
+    rows = c.fetchall()
+    return rows[0][0] if rows else None
 
 # Fonction pour charger les produits depuis le fichier CSV
 def load_products():
@@ -74,16 +83,21 @@ def maj_ref():
 # Fonction de rappel pour ajouter un nouveau fournisseur
 def add_fournisseur():
     new_fournisseur = st.session_state.new_fournisseur.capitalize()
-    if new_fournisseur :
+    code_fournisseur = st.session_state.code_fournisseur.upper()
+    # check input aren't empty
+    if new_fournisseur and code_fournisseur:
+        # Check if the new_fournisseur doesn't already exist in the list
         if new_fournisseur not in st.session_state.fournisseur_list :
-            st.session_state.fournisseur_list.append(new_fournisseur)
-            save_in_fournisseur(new_fournisseur)
+            # Add the new_fournisseur to the list and save it in the database
+            st.session_state.fournisseur_list.append((new_fournisseur,code_fournisseur))
+            save_in_fournisseur(new_fournisseur, code_fournisseur)
             st.success(f'Fournisseur "{new_fournisseur}" ajouté avec succès!')
+            # Clear the session state
             st.session_state.new_fournisseur = ''
         else :
             st.warning(f'Le fournisseur "{new_fournisseur}" existe déjà.')
     else:
-        st.error('Veuillez entrer un nom de fournisseur valide.')
+        st.error('Veuillez entrer un nom et un code de fournisseur valide.')
 
 # Fonction de suppression d'un fournisseur
 def del_fournisseur():
@@ -151,6 +165,15 @@ if 'new_fournisseur' not in st.session_state:
 
 # Fonction pour ajouter un produit
 def add_product():
+    # Vérifier si le produit existe déjà
+    existing_product = st.session_state.products[
+        (st.session_state.products['Référence'] == st.session_state.reference) &
+        (st.session_state.products['Date'] == st.session_state.date)
+    ]
+    if not existing_product.empty:
+        st.warning("Ce produit existe déjà dans la liste.")
+        return
+    
     new_product = pd.DataFrame({
         'Nom': [st.session_state.nom],
         'Référence': [st.session_state.reference],
@@ -216,6 +239,16 @@ def color_rows(row):
     else:
         return ['background-color: green'] * len(row)
 
+# Fonction pour insérer le code du fournisseur automatiquement
+def update_ref():
+    # get the fournisseur
+    fournisseur = st.session_state.fournisseur
+    # get the code associated
+    code = get_code(fournisseur)
+    # insert the ref text_input the code of the fournisseur
+    # if not st.session_state.reference:
+    # st.session_state.reference = f"{code}."
+
 # Interface utilisateur
 st.title('Gestion des Périmés')
 
@@ -280,6 +313,9 @@ with col1:
 
     # Input pour saisir un nouveau fournisseur
     new_fournisseur = st.text_input('Nouveau Fournisseur', key='new_fournisseur')
+    
+    # Input pour saisir le code fournisseur associé
+    code_fournisseur = st.text_input('Code Fournisseur', key='code_fournisseur')
 
     # Bouton pour ajouter le nouveau fournisseur à la liste
     st.button('Ajouter Fournisseur', on_click=add_fournisseur)

@@ -1,5 +1,6 @@
 .env
-products.csv
+*.csv
+*.db
 test.bat
 test.py
 todo.mk
