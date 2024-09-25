@@ -61,9 +61,14 @@ def remove_expired_products():
     st.session_state.products = st.session_state.products[pd.to_datetime(st.session_state.products['Date']).dt.date > today - timedelta(days=30)]
     save_products()
 
-# Fonction pour mettre en maj tout les ref dans la BDD
+# Fonction pour mettre en capitalize les fournisseur dans la BDD
 def capitalize_fournisseurs():
-    st.session_state.products['fournisseur'] = st.session_state.products['Fournisseur'].apply(lambda x: x.capitalize() if isinstance(x, str) else x)
+    st.session_state.products['Fournisseur'] = st.session_state.products['Fournisseur'].apply(lambda x: x.capitalize() if isinstance(x, str) else x)
+    save_products()
+
+# Fonction pour mettre en maj toutes les ref dans la BDD
+def maj_ref():
+    st.session_state.products['Référence'] = st.session_state.products['Référence'].apply(lambda x: x.upper() if isinstance(x, str) else x)
     save_products()
 
 # Fonction de rappel pour ajouter un nouveau fournisseur
@@ -103,6 +108,7 @@ if 'products' not in st.session_state:
 
 remove_expired_products()
 capitalize_fournisseurs()
+maj_ref()
 
 # Initialisation des variables de session
 if 'nom' not in st.session_state:
