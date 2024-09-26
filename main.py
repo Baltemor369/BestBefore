@@ -167,14 +167,17 @@ if 'new_fournisseur' not in st.session_state:
 # Fonction pour ajouter un produit
 def add_product():
     # Vérifier si le produit existe déjà
-    existing_product = st.session_state.products[
-        (st.session_state.products['Référence'] == st.session_state.reference) &
-        (st.session_state.products['Date'] == st.session_state.date)
-    ]
-    if not existing_product.empty:
+    resultat = st.session_state.products.loc[st.session_state.products['Référence'] == st.session_state.reference]
+    if not resultat.empty:
         st.warning("Ce produit existe déjà dans la liste.")
         return
     
+    # Vérifier si les champs sont remplis
+    if not (st.session_state.nom and st.session_state.reference and st.session_state.fournisseur and st.session_state.date and st.session_state.quantite):
+        st.warning("Veuillez remplir tous les champs pour ajouter un produit.")
+        return
+    
+    # Création d'un DataFrame avec les nouvelles informations du produit
     new_product = pd.DataFrame({
         'Nom': [st.session_state.nom],
         'Référence': [st.session_state.reference],
@@ -182,9 +185,14 @@ def add_product():
         'Date': [st.session_state.date],
         'Quantité': [st.session_state.quantite]
     })
+    
+    # Ajout du produit au DataFrame de produits existants
     st.session_state.products = pd.concat([st.session_state.products, new_product], ignore_index=True)
+
     save_products()
+    st.success("Product successfully")
     st.session_state.show_form = False
+    
     # Sauvegarde temporaire des informations du produit
     st.session_state.temp_nom = st.session_state.nom
     st.session_state.temp_reference = st.session_state.reference
