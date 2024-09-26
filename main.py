@@ -43,7 +43,7 @@ def load_fournisseur():
     c = conn.cursor()
     c.execute('SELECT nom,code FROM fournisseurs')
     rows = c.fetchall()
-    return [row[0] for row in rows]
+    return [row for row in rows]
 
 def get_code(name):
     conn = sqlite3.connect(DB_NAME)
@@ -94,6 +94,7 @@ def add_fournisseur():
             st.success(f'Fournisseur "{new_fournisseur}" ajouté avec succès!')
             # Clear the session state
             st.session_state.new_fournisseur = ''
+            st.session_state.code_fournisseur = ''
         else :
             st.warning(f'Le fournisseur "{new_fournisseur}" existe déjà.')
     else:
@@ -240,14 +241,9 @@ def color_rows(row):
         return ['background-color: green'] * len(row)
 
 # Fonction pour insérer le code du fournisseur automatiquement
-def update_ref():
-    # get the fournisseur
-    fournisseur = st.session_state.fournisseur
-    # get the code associated
-    code = get_code(fournisseur)
-    # insert the ref text_input the code of the fournisseur
-    # if not st.session_state.reference:
-    # st.session_state.reference = f"{code}."
+def update_reference():
+    print("")
+    print(st.session_state.fournisseur)
 
 # Interface utilisateur
 st.title('Gestion des Périmés')
@@ -286,15 +282,14 @@ with col1:
         if st.session_state.edit_mode:
             st.text_input('Nom', key='nom', on_change=lambda: st.session_state.update({'nom': st.session_state.nom.lower()}))
             st.text_input('Référence', key='reference', on_change=lambda: st.session_state.update({'reference': st.session_state.reference.upper().replace(' ','')}))
-            st.session_state.fournisseur = st.selectbox('Fournisseur', st.session_state.fournisseur_list)
-            st.text_input('Fournisseur', key='fournisseur', on_change=lambda: st.session_state.update({'fournisseur': st.session_state.fournisseur.lower()}))
+            st.session_state.fournisseur = st.selectbox('Fournisseur', [x[0] for x in st.session_state.fournisseur_list])
             st.date_input('Date', key='date')
             st.number_input('Quantité', min_value=0, key='quantite')
             st.button('Enregistrer', on_click=modify_product)
         else:
             st.text_input('Nom', key='nom', on_change=lambda: st.session_state.update({'nom': st.session_state.nom.lower()}))
             st.text_input('Référence', key='reference', on_change=lambda: st.session_state.update({'reference': st.session_state.reference.upper().replace(' ','')}))
-            st.session_state.fournisseur = st.selectbox('Fournisseur', st.session_state.fournisseur_list)
+            st.session_state.fournisseur = st.selectbox('Fournisseur', [x[0] for x in st.session_state.fournisseur_list])
             st.date_input('Date', key='date')
             st.number_input('Quantité', min_value=0, key='quantite')
             st.button('Enregistrer', on_click=add_product)
