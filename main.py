@@ -33,7 +33,7 @@ def save_out_fournisseur(nom):
     # Connection à la BDD
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    c.execute("DELETE FROM fournisseurs WHERE nom = ?", (new_fournisseur,))
+    c.execute("DELETE FROM fournisseurs WHERE nom = ?", (nom,))
     conn.commit()
 
 # Fonction pour charger la liste des fournisseurs depuis la base de données
@@ -118,7 +118,14 @@ def del_fournisseur():
             st.warning(f'Le fournisseur "{new_fournisseur}" n\'existe pas.')
     else:
         st.error('Veuillez entrer un nom de fournisseur valide.')
-        
+
+def get_list_nom_fournisseur():
+    ls = []
+    for nom, code in st.session_state.fournisseur_list:
+        ls.append(nom)
+    
+    return ls
+
 # Initialisation de la base de données (DataFrame)
 if 'products' not in st.session_state:
     st.session_state.products = load_products()
@@ -168,9 +175,10 @@ if 'new_fournisseur' not in st.session_state:
 
 # Fonction pour ajouter un produit
 def add_product():
+    df = st.session_state.products
+    
     # Vérifier si un produit avec cette date existe déjà
-    resultat = st.session_state.products.loc[st.session_state.products['Référence'] == st.session_state.reference and st.session_state.products['Date'] == st.session_state.date]
-    if not resultat.empty:
+    if st.session_state.reference in df['Référence'].values and st.session_state.date in df['Date'].values:
         st.warning("Ce produit existe déjà dans la liste.")
         return
     
@@ -264,7 +272,7 @@ def color_rows(row):
 
 def update_ref():
     # insérer le code du fournisseur dans la reference
-    st.session_state.reference = get_code(st.session_state.fournisseur)
+    st.session_state.reference = get_code(st.session_state.fournisseur)+"."
 
 # Interface utilisateur
 st.title('Gestion des Périmés')
@@ -302,14 +310,18 @@ with col1:
     if st.session_state.show_form:
         if st.session_state.edit_mode:
             st.text_input('Nom', key='nom', on_change=lambda: st.session_state.update({'nom': st.session_state.nom.lower()}))
-            st.session_state.fournisseur = st.selectbox('Fournisseur', [x[0] for x in st.session_state.fournisseur_list])
+            ls = get_list_nom_fournisseur() 
+            ls.insert(0, '')
+            st.selectbox('Fournisseur', ls, on_change=update_ref)
             st.text_input('Référence', key='reference', on_change=lambda: st.session_state.update({'reference': st.session_state.reference.upper().replace(' ','')}))
             st.date_input('Date', key='date')
             st.number_input('Quantité', min_value=0, key='quantite')
             st.button('Enregistrer', on_click=modify_product)
         else:
             st.text_input('Nom', key='nom', on_change=lambda: st.session_state.update({'nom': st.session_state.nom.lower()}))
-            st.session_state.fournisseur = st.selectbox('Fournisseur', [x[0] for x in st.session_state.fournisseur_list])
+            ls = get_list_nom_fournisseur() 
+            ls.insert(0, '')
+            st.selectbox('Fournisseur', ls, key='fournisseur', on_change=update_ref)
             st.text_input('Référence', key='reference', on_change=lambda: st.session_state.update({'reference': st.session_state.reference.upper().replace(' ','')}))
             st.date_input('Date', key='date')
             st.number_input('Quantité', min_value=0, key='quantite')
