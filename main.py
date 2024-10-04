@@ -200,7 +200,7 @@ def add_product():
     st.session_state.products = pd.concat([st.session_state.products, new_product], ignore_index=True)
 
     save_products()
-    st.success("Product successfully")
+    st.success("Product successfully added")
     st.session_state.show_form = False
     
     # Sauvegarde temporaire des informations du produit
@@ -216,14 +216,21 @@ def delete_products():
     st.session_state.products.drop(selected_indices, inplace=True)
     st.session_state.products.reset_index(drop=True, inplace=True)
     save_products()
+    st.success("Product successfully added")
     st.session_state.selected_rows = []
 
 # Fonction pour modifier un produit
 def modify_product():
+    df = st.session_state.products
+
     # Vérifier si un produit avec cette date existe déjà
-    resultat = st.session_state.products.loc[st.session_state.products['Référence'] == st.session_state.reference and st.session_state.products['Date'] == st.session_state.date]
-    if not resultat.empty:
+    if st.session_state.reference in df['Référence'].values and st.session_state.date in df['Date'].values:
         st.warning("Ce produit existe déjà dans la liste.")
+        return
+    
+    # Vérifier si les champs sont remplis
+    if not (st.session_state.nom and st.session_state.reference and st.session_state.fournisseur and st.session_state.date and st.session_state.quantite):
+        st.warning("Veuillez remplir tous les champs pour ajouter un produit.")
         return
     
     # Vérifier si les champs sont remplis
