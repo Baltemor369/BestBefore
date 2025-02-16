@@ -1,5 +1,6 @@
 .env
+__pycache__
 *.csv
 *.db
-test.bat
-test.py
+test*
+TODO*
